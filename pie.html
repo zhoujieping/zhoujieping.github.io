@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <script src='getCtx.js'></script>
+</head>
+
+<body>
+</body>
+
+</html>
+<script>
+    function PieChart(options) {
+        this.ctx = options.ctx;
+        this.colors = ['red', 'yellow', 'blue', 'green', 'pink'];
+        this.originX = options.originX;
+        this.originY = options.originY;
+        this.r = options.r;
+        this.textSpace = options.textSpace || 40;
+        this.data = options.data;
+    }
+    PieChart.prototype = {
+        //获取数据总和
+        getDataTotal: function () {
+            var dataTotal = 0;
+            this.data.forEach(function (obj, i) {
+                dataTotal += obj.number;
+            });
+            return dataTotal;
+        },
+        // 根据数据求每一个扇形所占用的弧度
+        getRadian: function () {
+            var dataTotal = this.getDataTotal();
+            return this.data.map(function (obj, i) {
+                return obj.number / dataTotal * Math.PI * 2;
+
+            });
+        },
+        // 根据每个扇形弧度求该扇形的起始点和结束点
+        getArcRadian: function(){
+            var radian=this.getRadian();
+            var startRadian=0,endRadian=0;
+            return radian.map(function(rad){
+                startRadian=endRadian;
+                endRadian=endRadian+rad;
+                return {
+                    radian:rad,
+                    startRadian:startRadian,
+                    endRadian:endRadian
+                };
+            });
+        },
+        // 根据扇形起始点和结束点画扇形
+        drawSelector:function(){
+            var arcRadian=this.getArcRadian();
+            arcRadian.forEach(function(obj,i){
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.originX,this.originY);
+                this.ctx.arc(this.originX,this.originY,this.r,obj.startRadian,obj.endRadian);
+                this.ctx.fillStyle = this.colors[i];
+                this.ctx.fill();
+            }.bind(this));
+        },
+        // 根据扇形起点和结束点画扇形对应的文字描述
+        drawText:function(){
+            var arcRadian=this.getArcRadian();
+            arcRadian.forEach(function(obj,i){
+                this.ctx.beginPath();
+                var lineRadian= obj.startRadian+obj.radian/2;
+                var lineX=this.originX+(this.r+this.textSpace)*Math.cos(lineRadian)
+                var lineY=this.originY+(this.r+this.textSpace)*Math.sin(lineRadian)
+
+                this.ctx.font='900 16px 微软雅黑';
+                var textWidth=this.ctx.measureText(this.data[i].name).width;
+                // 大于90度小于270度为左半球
+                if(lineRadian>Math.PI/2 && lineRadian<Math.PI*1.5){
+                    this.ctx.textAlign='right';
+                    textWidth=-Math.abs(textWidth);
+                }else{
+                    this.ctx.textAlign='left';
+                }
+                // 画线
+                this.ctx.moveTo(this.originX,this.originY);
+                this.ctx.lineTo(lineX,lineY);
+                this.ctx.lineTo(lineX+textWidth,lineY);
+                this.ctx.strokeStyle=this.colors[i];
+                this.ctx.stroke();
+                // 画文字
+                this.ctx.fillStyle=this.colors[i];
+                this.ctx.fillText(this.data[i].name,lineX,lineY-10);
+            }.bind(this));
+        },
+        draw:function(){
+            this.drawSelector();
+            this.drawText();
+        }
+
+    };
+
+    // --------------------------------------------------------
+    var pieChart = new PieChart({
+        ctx:getCtx('body',800,400),
+        originX:300,
+        originY:200,
+        r:150,
+        data:[
+            { name: '荤的', number: 300 },
+            { name: '素的', number: 100 },
+            { name: '荤素交加', number: 600 },
+            { name: '只喝水', number: 30 },
+            { name: '只吃饭', number: 100 },
+        ]
+    });
+    pieChart.draw();
+</script>
